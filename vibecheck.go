@@ -1,7 +1,7 @@
 package main
 
 import (
-//    "fmt"
+    "fmt"
     "log"
     "strings"
     "go/build"
@@ -15,79 +15,92 @@ import (
 )
 
 var (
-    goPath string
-    mods = map[string]string{}
+    goPkgModPath string
 )
 
-func run(path string) {
-    modFileData, err := os.ReadFile(path)
-    if err != nil {
-        log.Fatalln(err)
-    }
+func parseGoDependencies(modFilePath string) map[string]string {
+    result := map[string]string{}
 
-    modFile, err := modfile.Parse(path, modFileData, nil)
-    if err != nil {
-        log.Fatalln(err)
-    }
+    modCachePath := filepath.Join(goPkgModPath, "cache", "download")
 
-    modPath := filepath.Join(goPath, "pkg", "mod", "cache", "download")
+    // TODO: Use channels
+    queue := []string{modFilePath}
 
-    // TODO: Parse "replaces"
-    for _, v := range modFile.Require {
-        if _, ok := mods[v.Mod.Path]; ok {
-            log.Printf("Skipping %s, already found\n", v.Mod.Path)
-            continue
-        }
-        
-        log.Println("Module requires", v.Mod.String())
-        
-        dirs := strings.Split(v.Mod.Path, string(filepath.Separator))
-        // TODO:
-        modPath := filepath.Join(modPath, filepath.Join(filepath.Join(dirs...)))
+    for len(queue) > 0 {
+        path := queue[0]
+        queue = queue[1:]
 
-        log.Println("`-- Trying to locate", v.Mod.Version, "in", modPath)
-
-        bestVersion := v.Mod.Version
-        nextModPath := ""
-
-        err := filepath.WalkDir(modPath, func(path string, d fs.DirEntry, err error) error {
-            if err != nil {
-                return err
-            }
-
-            version, found := strings.CutSuffix(path, ".mod")
-            if found {
-                version = filepath.Base(version) 
-
-                if semver.Compare(version, bestVersion) >= 0 {
-                    bestVersion = version
-                    nextModPath = path
-                }
-            }
-
-            return nil
-        })
-
+        modFileData, err := os.ReadFile(path)
         if err != nil {
             log.Fatalln(err)
         }
 
-        if nextModPath != "" {
-            log.Println("`-- Found best version available", nextModPath)
+        modFile, err := modfile.Parse(path, modFileData, nil)
+        if err != nil {
+            log.Fatalln(err)
+        }
 
-            if _, ok := mods[v.Mod.Path]; !ok {
-                mods[v.Mod.Path] = v.Mod.String()
-                run(nextModPath)
+        // TODO: Parse "replaces"
+        for _, v := range modFile.Require {
+            if _, ok := result[v.Mod.Path]; ok {
+                log.Printf("Skipping %s, already found\n", v.Mod.Path)
+                continue
+            }
+            
+            log.Println(modFile.Module.Mod.Path, "module requires", v.Mod.String())
+            
+            dirs := strings.Split(v.Mod.Path, string(filepath.Separator))
+            // NOTE: Functional programming go brrr
+            modPath := filepath.Join(modCachePath, filepath.Join(filepath.Join(dirs...)))
+
+            log.Println("`-- Trying to locate", v.Mod.Version, "in", modPath)
+
+            bestVersion := v.Mod.Version
+            nextModPath := ""
+
+            err := filepath.WalkDir(modPath, func(path string, d fs.DirEntry, err error) error {
+                if err != nil {
+                    return err
+                }
+
+                version, found := strings.CutSuffix(path, ".mod")
+                if found {
+                    version = filepath.Base(version) 
+
+                    if semver.Compare(version, bestVersion) >= 0 {
+                        bestVersion = version
+                        nextModPath = path
+                    }
+                }
+
+                return nil
+            })
+
+            if err != nil {
+                log.Fatalln(err)
+            }
+
+            if nextModPath != "" {
+                log.Println("`-- Found best version available", nextModPath)
+
+                if _, ok := result[v.Mod.Path]; !ok {
+                    result[v.Mod.Path] = filepath.Join(goPkgModPath, v.Mod.String())
+                    queue = append(queue, nextModPath)
+                }
             }
         }
     }
+
+    return result
 }
 
 func main() {
-    goPath = os.Getenv("GOPATH")
-    if goPath == "" {
-        goPath = build.Default.GOPATH
+    goPkgModPath = os.Getenv("GOPATH")
+    if goPkgModPath == "" {
+        goPkgModPath = build.Default.GOPATH
     }
+
+    goPkgModPath = filepath.Join(goPkgModPath, "pkg", "mod")
 
     flag.Parse()
 
@@ -116,5 +129,9 @@ func main() {
 
     log.Println("Found", moduleModFilePath)
 
-    run(moduleModFilePath)
+    deps := parseGoDependencies(moduleModFilePath)
+
+    for k, v := range deps {
+        fmt.Printf("%v: %v\n", k, v)
+    }
 }
