@@ -8,18 +8,25 @@ import (
     "os"
     "io/fs"
     "path/filepath"
+    "encoding/json"
+    "time"
     "flag"
     
     "golang.org/x/mod/semver"
     "golang.org/x/mod/modfile"
 )
 
+type Dependency struct {
+    path string
+    time time.Time
+}
+
 var (
     goPkgModPath string
 )
 
-func parseGoDependencies(modFilePath string) map[string]string {
-    result := map[string]string{}
+func parseGoDependencies(modFilePath string) map[string]Dependency {
+    result := map[string]Dependency{}
 
     modCachePath := filepath.Join(goPkgModPath, "cache", "download")
 
@@ -83,8 +90,32 @@ func parseGoDependencies(modFilePath string) map[string]string {
             if nextModPath != "" {
                 log.Println("`-- Found best version available", nextModPath)
 
+                baseModName, _ := strings.CutSuffix(nextModPath, ".mod") 
+                infoFileData, err := os.ReadFile(baseModName + ".info")
+                if err != nil {
+                    continue
+                }
+
+                var infoData struct {
+                    Version string `json:"Version"`
+                    Time string `json:"Time"`
+                }
+
+                err = json.Unmarshal(infoFileData, &infoData)
+                if err != nil {
+                    log.Fatalln(err)
+                }
+
                 if _, ok := result[v.Mod.Path]; !ok {
-                    result[v.Mod.Path] = filepath.Join(goPkgModPath, v.Mod.String())
+                    time, err := time.Parse(time.RFC3339, infoData.Time)
+                    if err != nil {
+                        log.Fatalln(err)
+                    }
+                    
+                    result[v.Mod.Path] = Dependency{
+                        filepath.Join(goPkgModPath, v.Mod.String()),
+                        time,
+                    }
                     queue = append(queue, nextModPath)
                 }
             }
@@ -132,6 +163,6 @@ func main() {
     deps := parseGoDependencies(moduleModFilePath)
 
     for k, v := range deps {
-        fmt.Printf("%v: %v\n", k, v)
+        fmt.Printf("◉ %v:\n  %v\n  %v\n", k, v.path, v.time)
     }
 }
