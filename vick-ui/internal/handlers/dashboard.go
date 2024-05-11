@@ -9,7 +9,7 @@ import (
 type DashboardHandler struct {}
 
 func (h *DashboardHandler) HandleGet(w http.ResponseWriter, r *http.Request) error {
-	c := components.Base("Dashboard")
+	c := components.Base(components.Dashboard())
 	err := c.Render(r.Context(), w)
 	return err
 }

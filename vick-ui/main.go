@@ -21,7 +21,21 @@ func main() {
 	mux.Handle("GET /assets/*", http.StripPrefix("/assets/", fs))
 
 	dashboard := handlers.DashboardHandler{}
-	mux.HandleFunc("GET /", handlers.HandleFunc(dashboard.HandleGet))
+	mux.HandleFunc("GET /", func (w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" {
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte("Sorry, wrong room"))
+			return
+		}
+
+		handlers.Handler(dashboard.HandleGet).ServeHTTP(w, r)
+	})
+
+	signin := handlers.SignInHandler{
+		AccessEmail: "localhost@localdomain",
+	}
+	mux.Handle("GET /signin", handlers.Handler(signin.HandleGet))
+	mux.Handle("POST /signin", handlers.Handler(signin.HandlePost))
 
 	server := http.Server{
 		Addr: ":3000",

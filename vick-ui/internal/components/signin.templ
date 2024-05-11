@@ -1,0 +1,37 @@
+package components
+
+import "fmt"
+
+templ SignIn(accessEmail string) {
+	<header></header>
+	<article>
+	<h1>Sign in</h1>
+	<form hx-ext="response-targets"
+	      hx-post="/signin"
+	      hx-trigger="submit"
+	      hx-target-200="body"
+	      hx-target-401="#signin-failed">
+		<formset>
+			<input type="text"
+			       name="login"
+			       placeholder="Login"
+			       aria-label="Login"
+			       autocomplete="username"
+			       required="" />
+			<input type="password"
+			       name="password"
+			       placeholder="Password"
+			       aria-label="Password"
+			       autocomplete="current-password"
+			       required="" />
+		</formset>
+		<div id="signin-failed"></div>
+		<button type="submit">Login</button>
+		<a href={templ.URL(fmt.Sprintf("mailto:%s", accessEmail))}>Request access</a>
+	</form>
+	</article>
+}
+
+templ SignInFailed() {
+	<p>Invalid login or password</p>
+}
