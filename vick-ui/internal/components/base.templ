@@ -6,10 +6,28 @@ templ Base(name string) {
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<link rel="stylesheet" href="/assets/pico.min.css" />
+		<link rel="stylesheet" href="/assets/custom.css" />
 		<title>Vibecheck</title>
 	</head>
-	<body>
-		<h1>{name}</h1>
+	<body class="container">
+		<nav>
+			<ul>
+				<li><a href="/" class="contrast"><strong>Vibecheck</strong></a></li>
+			</ul>
+			<ul>
+				<li><a href="/" class="contrast">Dashboard</a></li>
+				<li><a href="#" class="contrast">Admin</a></li>
+				<li><button>Sign in</button></li>
+			</ul>
+		</nav>
+		<main>
+			<article>
+				<header><strong>{name}</strong></header>
+				<span aria-busy="true">Notifications will appear here</span>
+			</article>
+		</main>
+		<footer>
+		</footer>
 	</body>
 	</html>
 }

@@ -8,9 +8,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/a-h/templ"
-
-	"github.com/vladeemerr/vibecheck/vick-ui/internal/components"
+	"github.com/vladeemerr/vibecheck/vick-ui/internal/handlers"
 )
 
 func main() {
@@ -22,8 +20,8 @@ func main() {
 	fs := http.FileServer(http.Dir("./vick-ui/assets/"))
 	mux.Handle("GET /assets/*", http.StripPrefix("/assets/", fs))
 
-	c := components.Base("Vibecheck")
-	mux.Handle("GET /", templ.Handler(c))
+	dashboard := handlers.DashboardHandler{}
+	mux.HandleFunc("GET /", handlers.HandleFunc(dashboard.HandleGet))
 
 	server := http.Server{
 		Addr: ":3000",
