@@ -7,6 +7,10 @@ import (
 	"os/signal"
 	"context"
 	"errors"
+
+	"github.com/a-h/templ"
+
+	"github.com/vladeemerr/vibecheck/vick-ui/internal/components"
 )
 
 func main() {
@@ -14,6 +18,12 @@ func main() {
 	signal.Notify(exit, os.Interrupt, os.Kill)
 
 	mux := http.NewServeMux()
+
+	fs := http.FileServer(http.Dir("./vick-ui/assets/"))
+	mux.Handle("GET /assets/*", http.StripPrefix("/assets/", fs))
+
+	c := components.Base("Vibecheck")
+	mux.Handle("GET /", templ.Handler(c))
 
 	server := http.Server{
 		Addr: ":3000",
