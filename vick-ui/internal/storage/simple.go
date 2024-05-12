@@ -1,22 +1,22 @@
-package db
+package storage
 
 import (
 	"sync"
 	"maps"
 )
 
-type SimpleDB struct {
+type SimpleStorage struct {
 	data map[string]any
 	mutex sync.RWMutex
 }
 
-func NewSimpleDB() *SimpleDB {
-	return &SimpleDB{
+func NewSimpleStorage() *SimpleStorage {
+	return &SimpleStorage{
 		data: make(map[string]any),
 	}
 }
 
-func (db *SimpleDB) GetData() map[string]any {
+func (db *SimpleStorage) GetData() map[string]any {
 	db.mutex.RLock()
 	defer db.mutex.RUnlock()
 
@@ -26,19 +26,19 @@ func (db *SimpleDB) GetData() map[string]any {
 	return result
 }
 
-func (db *SimpleDB) Insert(key string, value any) {
+func (db *SimpleStorage) Insert(key string, value any) {
 	db.mutex.Lock()
 	db.data[key] = value
 	db.mutex.Unlock()
 }
 
-func (db *SimpleDB) Remove(key string) {
+func (db *SimpleStorage) Remove(key string) {
 	db.mutex.Lock()
 	delete(db.data, key)
 	db.mutex.Unlock()
 }
 
-func (db *SimpleDB) Search(key string) (any, bool) {
+func (db *SimpleStorage) Search(key string) (any, bool) {
 	db.mutex.RLock()
 	defer db.mutex.RUnlock()
 

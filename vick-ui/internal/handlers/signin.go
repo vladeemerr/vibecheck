@@ -1,10 +1,13 @@
 package handlers
 
 import (
+	"crypto/rand"
+	"encoding/base64"
+	"io"
 	"net/http"
 
 	"github.com/vladeemerr/vibecheck/vick-ui/internal/components"
-	"github.com/vladeemerr/vibecheck/vick-ui/internal/db"
+	"github.com/vladeemerr/vibecheck/vick-ui/internal/storage"
 )
 
 type SignInGetHandler struct {
@@ -12,7 +15,8 @@ type SignInGetHandler struct {
 }
 
 type SignInPostHandler struct {
-	Users *db.SimpleDB
+	Users *storage.SimpleStorage
+	Sessions *storage.SimpleStorage
 }
 
 func (h *SignInGetHandler) Handle(w http.ResponseWriter, r *http.Request) error {
@@ -35,7 +39,23 @@ func (h *SignInPostHandler) Handle(w http.ResponseWriter, r *http.Request) error
 		return c.Render(r.Context(), w)
 	}
 
+	sessionBytes := make([]byte, 32)
+	if _, err := io.ReadFull(rand.Reader, sessionBytes); err != nil {
+		return err
+	}
+
+	session := base64.URLEncoding.EncodeToString(sessionBytes)
+	h.Sessions.Insert(login, session)
+
 	w.Header().Set("HX-Redirect", "/")
+
+	http.SetCookie(w, &http.Cookie{
+		Name: "session",
+		Value: session,
+		Path: "/",
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	})
 
 	return nil
 }

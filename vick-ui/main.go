@@ -9,7 +9,7 @@ import (
 	"errors"
 
 	"github.com/vladeemerr/vibecheck/vick-ui/internal/handlers"
-	"github.com/vladeemerr/vibecheck/vick-ui/internal/db"
+	"github.com/vladeemerr/vibecheck/vick-ui/internal/storage"
 )
 
 func main() {
@@ -18,8 +18,10 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	users := db.NewSimpleDB()
+	users := storage.NewSimpleStorage()
 	users.Insert("example", "1234")
+
+	sessions := storage.NewSimpleStorage()
 
 	fs := http.FileServer(http.Dir("./vick-ui/assets/"))
 	mux.Handle("GET /assets/*", http.StripPrefix("/assets/", fs))
@@ -41,7 +43,8 @@ func main() {
 	mux.Handle("GET /signin", handlers.Handler(signinGet.Handle))
 
 	signinPost := handlers.SignInPostHandler{
-		users,
+		Users: users,
+		Sessions: sessions,
 	}
 	mux.Handle("POST /signin", handlers.Handler(signinPost.Handle))
 
