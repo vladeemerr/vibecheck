@@ -1,33 +1,41 @@
 package handlers
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/vladeemerr/vibecheck/vick-ui/internal/components"
+	"github.com/vladeemerr/vibecheck/vick-ui/internal/db"
 )
 
-type SignInHandler struct {
+type SignInGetHandler struct {
 	AccessEmail string
 }
 
-func (h *SignInHandler) HandleGet(w http.ResponseWriter, r *http.Request) error {
+type SignInPostHandler struct {
+	Users *db.SimpleDB
+}
+
+func (h *SignInGetHandler) Handle(w http.ResponseWriter, r *http.Request) error {
 	c := components.SignIn(h.AccessEmail)
 	err := c.Render(r.Context(), w)
 	return err
 }
 
-func (h *SignInHandler) HandlePost(w http.ResponseWriter, r *http.Request) error {
+func (h *SignInPostHandler) Handle(w http.ResponseWriter, r *http.Request) error {
 	r.ParseForm()
 
 	login := r.FormValue("login")
 	password := r.FormValue("password")
 
-	log.Println(login, password)
+	key, exist := h.Users.Search(login)
 
-	w.WriteHeader(http.StatusUnauthorized)
-	c := components.SignInFailed()
-	err := c.Render(r.Context(), w)
+	if !exist || key != password {
+		w.WriteHeader(http.StatusUnauthorized)
+		c := components.SignInFailed()
+		return c.Render(r.Context(), w)
+	}
 
-	return err
+	w.Header().Set("HX-Redirect", "/")
+
+	return nil
 }

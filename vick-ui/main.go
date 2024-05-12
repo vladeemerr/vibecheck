@@ -9,6 +9,7 @@ import (
 	"errors"
 
 	"github.com/vladeemerr/vibecheck/vick-ui/internal/handlers"
+	"github.com/vladeemerr/vibecheck/vick-ui/internal/db"
 )
 
 func main() {
@@ -16,6 +17,9 @@ func main() {
 	signal.Notify(exit, os.Interrupt, os.Kill)
 
 	mux := http.NewServeMux()
+
+	users := db.NewSimpleDB()
+	users.Insert("example", "1234")
 
 	fs := http.FileServer(http.Dir("./vick-ui/assets/"))
 	mux.Handle("GET /assets/*", http.StripPrefix("/assets/", fs))
@@ -31,11 +35,15 @@ func main() {
 		handlers.Handler(dashboard.HandleGet).ServeHTTP(w, r)
 	})
 
-	signin := handlers.SignInHandler{
+	signinGet := handlers.SignInGetHandler{
 		AccessEmail: "localhost@localdomain",
 	}
-	mux.Handle("GET /signin", handlers.Handler(signin.HandleGet))
-	mux.Handle("POST /signin", handlers.Handler(signin.HandlePost))
+	mux.Handle("GET /signin", handlers.Handler(signinGet.Handle))
+
+	signinPost := handlers.SignInPostHandler{
+		users,
+	}
+	mux.Handle("POST /signin", handlers.Handler(signinPost.Handle))
 
 	server := http.Server{
 		Addr: ":3000",
